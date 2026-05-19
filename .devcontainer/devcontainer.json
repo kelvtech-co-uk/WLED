@@ -8,7 +8,10 @@
 			"VARIANT": "3"
 		}
 	},
-
+	"runArgs": [
+    "--device=/dev/ttyUSB0",
+	"--group-add=16"
+  	],
 	// To give the container access to a device serial port, you can uncomment one of the following lines.
 	// Note: If running on Windows, you will have to do some additional steps:
 	// https://stackoverflow.com/questions/68527888/how-can-i-use-a-usb-com-port-inside-of-a-vscode-development-container
