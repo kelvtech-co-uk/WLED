@@ -350,11 +350,11 @@ void setPrimaryNetworkInterface() {
   NetworkInterface *preferred = ethPrimaryInterface ? (NetworkInterface*)&ETH : (NetworkInterface*)&WiFi.STA;
   NetworkInterface *fallback  = ethPrimaryInterface ? (NetworkInterface*)&WiFi.STA : (NetworkInterface*)&ETH;
 
-  if (preferred->hasIP()) {
+  if (preferred->hasIP() && preferred->linkUp()) {
     preferred->setDefault();
     DEBUG_PRINTF_P(PSTR("setPNI: Primary netif set to %s (%s)\n"),
       ethPrimaryInterface ? "eth" : "sta", preferred->localIP().toString().c_str());
-  } else if (fallback->hasIP()) {
+  } else if (fallback->hasIP() && fallback->linkUp()) {
     // AI: fall back to any ready interface if preferred is unavailable
     // prevents outbound traffic being pinned to a dead default netif
     fallback->setDefault();
@@ -565,7 +565,7 @@ void WiFiEvent(WiFiEvent_t event)
       DEBUG_PRINTF_P(PSTR("WiFi-E: AP Client Connected (%d) @ %lus.\n"), (int)apClients, millis()/1000);
       break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-      DEBUG_PRINT(F("WiFi-E: IP address: ")); DEBUG_PRINTLN(WLEDNetwork.localIP());  // AI: renamed Network->WLEDNetwork (V5 collision with arduino-esp32 3.x global Network object)
+      DEBUG_PRINT(F("WiFi-E: IP address: ")); DEBUG_PRINTLN(WiFi.localIP());  // AI: renamed Network->WLEDNetwork (V5 collision with arduino-esp32 3.x global Network object)
       // AI: re-evaluate primary network interface when WiFi gets its IP
       // handles both static IP and DHCP scenarios for WiFi interface
       #if defined(ARDUINO_ARCH_ESP32) && defined(WLED_USE_ETHERNET)

@@ -368,8 +368,8 @@ void getSettingsJS(byte subPage, Print& settingsScript)
       IPAddress ethIP = ETH.localIP();
       IPAddress wifiIP = WiFi.localIP();
       if (ethernetType != WLED_ETH_NONE &&
-          ethIP != (uint32_t)0 &&
-          wifiIP != (uint32_t)0) {
+          uint32_t(ethIP) != 0U &&
+          uint32_t(wifiIP) != 0U) {
         // both interfaces active
         snprintf_P(s, sizeof(s), PSTR("%d.%d.%d.%d (ETH) / %d.%d.%d.%d (WiFi)"),
           ethIP[0], ethIP[1], ethIP[2], ethIP[3],
