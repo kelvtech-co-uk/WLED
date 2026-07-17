@@ -769,6 +769,11 @@ void WLED::initConnection()
   // Reset mode to NULL to force a full STA mode transition, so that WiFi.mode(WIFI_STA) below actually applies the hostname (and TX power, etc.).
   // This is required on reconnects when mode is already WIFI_STA.
   DEBUG_PRINTLN(F("WiFi mode_null: driver teardown / re-init."));
+  // AI: stop mDNS before tearing down the WiFi driver. The IDF mDNS component
+  // runs on its own task and holds esp_netif references; destroying the STA
+  // netif underneath it causes a LoadProhibited crash in esp_netif_is_netif_up
+  // (via _udp_join_group) on IDF v5. Restarted in initInterfaces() post-reconnect.
+  MDNS.end();
   WiFi.mode(WIFI_MODE_NULL);
   apActive = false;           // the AP is physically torn down by WIFI_MODE_NULL
   delay(5);                   // give the WiFi stack time to complete the mode transition
