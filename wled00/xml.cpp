@@ -5,9 +5,12 @@
 // esp_netif_get_netif_impl bridges esp-netif handle to lwIP struct netif*
 // netif_default is the lwIP global pointer to the current default interface
 #if defined(ARDUINO_ARCH_ESP32) && defined(WLED_USE_ETHERNET)
+  #if !defined(ESP_IDF_VERSION) || (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0))
+  // AI: V4 only — on IDF v5 / arduino-esp32 3.x, ETH.isDefault() replaces the manual query
   #include "esp_netif.h"            // AI: required for esp_netif_next() and esp_netif_get_desc()
   #include "esp_netif_net_stack.h"  // AI: required for esp_netif_get_netif_impl()
   #include "lwip/netif.h"           // AI: required for netif_default
+  #endif
 #endif
 
 /*
@@ -285,6 +288,11 @@ void getSettingsJS(byte subPage, Print& settingsScript)
     #endif
     printSetFormCheckbox(settingsScript,PSTR("FG"),force802_3g);
     printSetFormCheckbox(settingsScript,PSTR("WS"),noWifiSleep);
+    #ifdef SOC_WIFI_SUPPORT_5G
+    printSetFormValue(settingsScript,PSTR("BM"),wifiBandMode);
+    #else
+    settingsScript.print(F("gId('bm').style.display='none';"));
+    #endif
 
     #ifndef WLED_DISABLE_ESPNOW
     printSetFormCheckbox(settingsScript,PSTR("RE"),enableESPNow);
@@ -321,6 +329,11 @@ void getSettingsJS(byte subPage, Print& settingsScript)
       // netif at request time rather than cached variable, ensuring accuracy
       // even when setPrimaryNetworkInterface() hasn't been called this session
       #if defined(ARDUINO_ARCH_ESP32) && defined(WLED_USE_ETHERNET)
+      #if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
+      // AI: IDF v5 / arduino-esp32 3.x — NetworkInterface::isDefault() directly
+      // reports whether the ethernet netif is the current lwIP default.
+      bool ethIsActive = ETH.isDefault();
+      #else
       struct netif *defaultNetif = netif_default;
       bool ethIsActive = false;
       if (defaultNetif != nullptr) {
@@ -334,6 +347,7 @@ void getSettingsJS(byte subPage, Print& settingsScript)
           esp_netif = esp_netif_next(esp_netif);
         }
       }
+      #endif // ESP_IDF_VERSION >= 5.0.0
       printSetClassElementHTML(settingsScript, PSTR("pnia"), 0,
         ethIsActive ? (char*)"Ethernet" : (char*)"WiFi");
       #endif
@@ -343,13 +357,14 @@ void getSettingsJS(byte subPage, Print& settingsScript)
     #endif
   // AI: end
 
-    if (Network.isConnected()) //is connected
+    if (WLEDNetwork.isConnected()) //is connected
     {
       char s[64] = {'\0'};
       #if defined(ARDUINO_ARCH_ESP32) && defined(WLED_USE_ETHERNET)
       // AI: show both interface IPs when both are active so users can
       // identify which IP to use from each subnet. mDNS resolves to the
       // primary interface IP only.
+      // AI: Network renamed to WLEDNetwork on V5 (collision with arduino-esp32 3.x global)
       IPAddress ethIP = ETH.localIP();
       IPAddress wifiIP = WiFi.localIP();
       if (ethernetType != WLED_ETH_NONE &&
@@ -360,15 +375,15 @@ void getSettingsJS(byte subPage, Print& settingsScript)
           ethIP[0], ethIP[1], ethIP[2], ethIP[3],
           wifiIP[0], wifiIP[1], wifiIP[2], wifiIP[3]);
       } else {
-        IPAddress localIP = Network.localIP();
-        if (Network.isEthernet()) {
+        IPAddress localIP = WLEDNetwork.localIP();
+        if (WLEDNetwork.isEthernet()) {
           snprintf_P(s, sizeof(s), PSTR("%d.%d.%d.%d (Ethernet)"), localIP[0], localIP[1], localIP[2], localIP[3]);
         } else {
           snprintf_P(s, sizeof(s), PSTR("%d.%d.%d.%d"), localIP[0], localIP[1], localIP[2], localIP[3]);
         }
       }
       #else
-      IPAddress localIP = Network.localIP();
+      IPAddress localIP = WLEDNetwork.localIP();
       snprintf_P(s, sizeof(s), PSTR("%d.%d.%d.%d"), localIP[0], localIP[1], localIP[2], localIP[3]);
       #endif
       printSetClassElementHTML(settingsScript, PSTR("sip"), 0, s);
